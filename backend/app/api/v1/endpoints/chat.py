@@ -14,7 +14,7 @@ router = APIRouter()
 # Configure Gemini
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
-@router.post("/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
 async def chat_with_swarm(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db)

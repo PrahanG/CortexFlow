@@ -103,7 +103,7 @@ export class ApiService {
   }
 
   listDocuments(): Observable<DocumentInfo[]> {
-    return this.http.get<DocumentInfo[]>(`${this.baseUrl}/documents/`);
+    return this.http.get<DocumentInfo[]>(`${this.baseUrl}/documents`);
   }
 
   getDocumentDetails(id: string): Observable<DocumentDetails> {
@@ -111,16 +111,16 @@ export class ApiService {
   }
 
   getDashboardStats(): Observable<DashboardStats> {
-    return this.http.get<DashboardStats>(`${this.baseUrl}/stats/`);
+    return this.http.get<DashboardStats>(`${this.baseUrl}/stats`);
   }
 
   searchDocuments(query: string): Observable<SearchResponse> {
     const params = new HttpParams().set('q', query);
-    return this.http.get<SearchResponse>(`${this.baseUrl}/search/`, { params });
+    return this.http.get<SearchResponse>(`${this.baseUrl}/search`, { params });
   }
 
   chatWithSwarm(query: string): Observable<ChatResponse> {
-    return this.http.post<ChatResponse>(`${this.baseUrl}/chat/`, { query });
+    return this.http.post<ChatResponse>(`${this.baseUrl}/chat`, { query });
   }
 
   exportDocument(id: string): Observable<Blob> {

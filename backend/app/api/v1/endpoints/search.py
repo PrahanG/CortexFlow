@@ -9,7 +9,7 @@ from app.services.vector_service import query_vector_store
 
 router = APIRouter()
 
-@router.get("/", response_model=SearchResponse)
+@router.get("", response_model=SearchResponse)
 async def perform_search(
     q: str = Query(..., min_length=1, description="Natural language search query"),
     limit: int = Query(5, ge=1, le=20, description="Max search results to retrieve"),

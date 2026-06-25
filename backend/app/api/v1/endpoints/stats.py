@@ -9,7 +9,7 @@ from app.schemas.stats import DashboardStats
 
 router = APIRouter()
 
-@router.get("/", response_model=DashboardStats)
+@router.get("", response_model=DashboardStats)
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db)
 ):

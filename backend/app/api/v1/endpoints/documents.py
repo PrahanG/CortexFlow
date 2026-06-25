@@ -68,7 +68,7 @@ async def upload_document(
 
     return document
 
-@router.get("/", response_model=List[DocumentResponse])
+@router.get("", response_model=List[DocumentResponse])
 async def list_documents(
     db: AsyncSession = Depends(get_db)
 ):
