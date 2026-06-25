@@ -1,0 +1,555 @@
+<div class="app-container">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-circle">
+        <span>CF</span>
+      </div>
+      <div class="brand-text">
+        <h1>CortexFlow</h1>
+        <p>Autonomous Enterprise Document Governance & Triage</p>
+      </div>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="refreshData()">
+        <span class="sync-icon">&#x21bb;</span> Sync System
+      </button>
+      <div class="server-badge badge badge-success">API Online</div>
+    </div>
+  </header>
+
+  <!-- Dashboard Workspace Grid -->
+  <main class="workspace">
+    
+    <!-- LEFT PANEL: Dashboard Stats & Document Inventory Grid -->
+    <section class="left-panel">
+      
+      <!-- Real-Time Analytics Telemetry Widgets -->
+      <div class="stats-grid" *ngIf="stats">
+        <div class="stat-card glass-card">
+          <div class="stat-icon purple">&#x1F4C4;</div>
+          <div class="stat-info">
+            <span class="label">Total Files</span>
+            <span class="value">{{ stats.total_documents }}</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon blue" [class.pulse]="stats.pending_documents > 0">&#x2699;</div>
+          <div class="stat-info">
+            <span class="label">Processing</span>
+            <span class="value">{{ stats.pending_documents }}</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon green">&#x2705;</div>
+          <div class="stat-info">
+            <span class="label">Compliant</span>
+            <span class="value">{{ stats.pii_compliant_count }}</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon red">&#x26A0;</div>
+          <div class="stat-info">
+            <span class="label">PII Flagged</span>
+            <span class="value">{{ stats.pii_flagged_count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swarm Insights Visualizations -->
+      <div class="swarm-insights glass-card" *ngIf="stats">
+        <div class="section-header border-b">
+          <h3>Swarm Insights</h3>
+        </div>
+        
+        <div class="insights-content">
+          <!-- Donut Chart Section -->
+          <div class="chart-section">
+            <h4 class="chart-title">Document Types</h4>
+            <div class="donut-chart-container">
+              <svg width="120" height="120" viewBox="0 0 100 100" class="donut-svg">
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="12"></circle>
+                <ng-container *ngFor="let seg of getDonutSegments()">
+                  <circle cx="50" cy="50" r="40" 
+                          fill="transparent" 
+                          [attr.stroke]="seg.color" 
+                          stroke-width="12" 
+                          [attr.stroke-dasharray]="seg.dashArray" 
+                          [attr.stroke-dashoffset]="seg.dashOffset" 
+                          transform="rotate(-90 50 50)" 
+                          class="donut-segment">
+                    <title>{{ seg.label }}: {{ seg.count }} files ({{ seg.percentage.toFixed(1) }}%)</title>
+                  </circle>
+                </ng-container>
+                <text x="50%" y="54%" text-anchor="middle" class="donut-center-text">
+                  {{ stats.total_documents }}
+                </text>
+              </svg>
+              
+              <div class="legend-grid">
+                <div class="legend-item" *ngFor="let seg of getDonutSegments()">
+                  <span class="legend-dot" [style.background-color]="seg.color"></span>
+                  <span class="legend-label">{{ seg.label }}</span>
+                  <span class="legend-value">{{ seg.count }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compliance Risk Profile Section -->
+          <div class="chart-section mt-4">
+            <h4 class="chart-title">Compliance Risk Profile</h4>
+            <div class="risk-bars-container">
+              <div class="risk-bar-row" *ngFor="let r of getRiskLevels()">
+                <div class="risk-bar-meta">
+                  <span class="risk-bar-label">{{ r.level }}</span>
+                  <span class="risk-bar-value">{{ r.count }} ({{ r.percentage.toFixed(0) }}%)</span>
+                </div>
+                <div class="risk-progress-bg">
+                  <div class="risk-progress-fill" 
+                       [class]="r.colorClass" 
+                       [style.width.%]="r.percentage">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Inventory List -->
+      <div class="inventory-section glass-card">
+
+        <div class="section-header">
+          <h3>Ingested Documents</h3>
+          <span class="count-badge">{{ documents.length }} Files</span>
+        </div>
+        
+        <div class="doc-list-container">
+          <div class="empty-state" *ngIf="documents.length === 0">
+            <p>No documents uploaded yet. Drag and drop a file to begin.</p>
+          </div>
+          
+          <div class="doc-item" 
+               *ngFor="let doc of documents" 
+               [class.active]="selectedDocument?.id === doc.id"
+               [class.processing]="doc.status !== 'COMPLETED' && doc.status !== 'FAILED'"
+               (click)="viewDocumentDetails(doc.id)">
+            <div class="doc-icon">
+              <span *ngIf="doc.filename.endsWith('.pdf')">&#x1F4DF;</span>
+              <span *ngIf="!doc.filename.endsWith('.pdf')">&#x1F4DD;</span>
+            </div>
+            
+            <div class="doc-details">
+              <h4 class="doc-name">{{ doc.filename }}</h4>
+              <div class="doc-meta">
+                <span>{{ formatBytes(doc.file_size) }}</span>
+                <span class="dot">&bull;</span>
+                <span>{{ doc.created_at | date:'shortTime' }}</span>
+              </div>
+            </div>
+            
+            <div class="doc-status">
+              <span class="badge" 
+                    [class.badge-success]="doc.status === 'COMPLETED'"
+                    [class.badge-danger]="doc.status === 'FAILED'"
+                    [class.badge-info]="doc.status !== 'COMPLETED' && doc.status !== 'FAILED'">
+                {{ doc.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Action Workspace, Ingestion and RAG Search -->
+    <section class="right-panel">
+      
+      <!-- Hybrid RAG Search Bar -->
+      <div class="search-section glass-card">
+        <div class="search-bar-container">
+          <span class="search-icon">&#x1F50D;</span>
+          <input type="text" 
+                 class="form-input search-input" 
+                 placeholder="Search documents with Natural Language RAG (e.g., 'find credit cards in vendor billing')..."
+                 [(ngModel)]="searchQuery" 
+                 (keyup.enter)="triggerRagSearch()">
+          <button class="btn-primary" [disabled]="isSearching" (click)="triggerRagSearch()">
+            <span *ngIf="!isSearching">Query RAG</span>
+            <span *ngIf="isSearching">Searching...</span>
+          </button>
+        </div>
+
+        <!-- Search Results Panel -->
+        <div class="search-results" *ngIf="searchResults.length > 0 || isSearching">
+          <div class="search-results-header">
+            <h4>RAG Context Retrieval Matches</h4>
+            <button class="close-search" (click)="searchResults = []">&times;</button>
+          </div>
+          
+          <div class="results-scroll">
+            <div class="search-hit glass-card" *ngFor="let hit of searchResults">
+              <div class="hit-meta">
+                <span class="hit-doc-name" (click)="viewDocumentDetails(hit.document_id)">{{ hit.filename }}</span>
+                <span class="hit-score">Distance: {{ hit.distance.toFixed(4) }}</span>
+              </div>
+              <p class="hit-text">"... {{ hit.content }} ..."</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Ingestion Drop Zone -->
+      <div class="dropzone glass-card" 
+           [class.dragover]="isDragOver"
+           [class.uploading]="isUploading"
+           (dragover)="onDragOver($event)"
+           (dragleave)="onDragLeave($event)"
+           (drop)="onDrop($event)">
+        
+        <input type="file" id="file-input" class="hidden-input" (change)="onFileSelected($event)" accept=".pdf,.txt,.eml,.email">
+        <label for="file-input" class="dropzone-label">
+          <div class="upload-icon-circle">
+            <span *ngIf="!isUploading">&#x2B06;</span>
+            <span *ngIf="isUploading" class="spinner"></span>
+          </div>
+          <div class="dropzone-text" *ngIf="!isUploading">
+            <h3>Drag & Drop unstructured documents here</h3>
+            <p>Supports PDFs, Email logs (.eml) or text files. Max size 20MB.</p>
+            <span class="browse-link">or browse local files</span>
+          </div>
+          <div class="dropzone-text" *ngIf="isUploading">
+            <h3>Uploading document to pipeline...</h3>
+            <p>Initializing Layout parsing structures</p>
+          </div>
+        </label>
+        
+        <div class="error-alert" *ngIf="uploadError">
+          <span>&#x26A0;</span> {{ uploadError }}
+        </div>
+      </div>
+
+      <!-- WORKSPACE: Detailed Governance Audit & Active Swarm Timeline -->
+      <div class="workspace-details" *ngIf="selectedDocument">
+        
+        <div class="workspace-title-bar">
+          <div class="title-info">
+            <h2>{{ selectedDocument.filename }}</h2>
+            <p>Document ID: {{ selectedDocument.id }}</p>
+          </div>
+          <div class="workspace-status">
+            <span class="badge" 
+                  [class.badge-success]="selectedDocument.status === 'COMPLETED'"
+                  [class.badge-danger]="selectedDocument.status === 'FAILED'"
+                  [class.badge-info]="selectedDocument.status !== 'COMPLETED' && selectedDocument.status !== 'FAILED'">
+              Status: {{ selectedDocument.status }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 3-Column Swarm Insight Grid -->
+        <div class="insight-grid">
+          
+          <!-- Column 1: Multi-Agent Timeline (WebSockets Stream) -->
+          <div class="insight-col glass-card timeline-col">
+            <div class="col-header">
+              <h4>Swarm Timeline Execution</h4>
+              <span class="pulse-indicator" *ngIf="selectedDocument.id === activeJobId"></span>
+            </div>
+            
+            <div class="timeline-box" id="timeline-box">
+              <div class="timeline-wrapper">
+                
+                <!-- If the document is completed/failed, show logs from db, else show active logs -->
+                <ng-container *ngIf="selectedDocument.id !== activeJobId">
+                  <div class="timeline-node" 
+                       *ngFor="let log of selectedDocument.logs"
+                       [class.success]="log.status === 'SUCCESS'"
+                       [class.failed]="log.status === 'FAILED'"
+                       [class.system]="log.agent_name === 'System'">
+                    <div class="node-icon"></div>
+                    <div class="node-content">
+                      <div class="node-meta">
+                        <span class="node-agent">{{ log.agent_name }}</span>
+                        <span class="node-time">{{ log.timestamp | date:'shortTime' }}</span>
+                      </div>
+                      <p class="node-msg">{{ log.message }}</p>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <!-- Active real-time WebSocket logs -->
+                <ng-container *ngIf="selectedDocument.id === activeJobId">
+                  <div class="timeline-node" 
+                       *ngFor="let log of activeTimelineLogs"
+                       [class.success]="log.status === 'SUCCESS'"
+                       [class.failed]="log.status === 'FAILED'"
+                       [class.system]="log.agent_name === 'System'">
+                    <div class="node-icon"></div>
+                    <div class="node-content">
+                      <div class="node-meta">
+                        <span class="node-agent">{{ log.agent_name }}</span>
+                        <span class="node-time">{{ log.timestamp | date:'shortTime' }}</span>
+                      </div>
+                      <p class="node-msg">{{ log.message }}</p>
+                    </div>
+                  </div>
+                  <div class="timeline-spinner-container" *ngIf="selectedDocument.status !== 'COMPLETED' && selectedDocument.status !== 'FAILED'">
+                    <span class="spinner small"></span>
+                    <span class="spinner-text">Agentic Swarm is processing...</span>
+                  </div>
+                </ng-container>
+                
+                <div class="empty-timeline" *ngIf="(selectedDocument.id === activeJobId ? activeTimelineLogs : selectedDocument.logs).length === 0">
+                  <p>Queueing swarm execution nodes...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Agent A & Agent B Reports -->
+          <div class="insight-col report-col">
+            
+            <!-- Agent A: Triage Classification Report -->
+            <div class="triage-report glass-card mb-4">
+              <div class="col-header border-b">
+                <h4>Agent A: Triage & Classification</h4>
+              </div>
+              
+              <div class="report-content" *ngIf="selectedDocument.metadata_records.length > 0">
+                <div class="triage-type-row">
+                  <span class="report-label">Document Type:</span>
+                  <span class="doc-type-pill">{{ selectedDocument.metadata_records[0].doc_type }}</span>
+                </div>
+                
+                <!-- Added Sentiment Badge -->
+                <div class="triage-type-row mt-2" *ngIf="selectedDocument.metadata_records[0].sentiment">
+                  <span class="report-label">Sentiment Tone:</span>
+                  <span class="badge" 
+                        [class.badge-success]="selectedDocument.metadata_records[0].sentiment === 'Positive' || selectedDocument.metadata_records[0].sentiment === 'Neutral'"
+                        [class.badge-warning]="selectedDocument.metadata_records[0].sentiment === 'Urgent' || selectedDocument.metadata_records[0].sentiment === 'Confidential'"
+                        [class.badge-danger]="selectedDocument.metadata_records[0].sentiment === 'Negative'">
+                    {{ selectedDocument.metadata_records[0].sentiment }}
+                  </span>
+                </div>
+
+                <div class="triage-confidence mt-2">
+                  <span class="report-label">Confidence:</span>
+                  <div class="progress-bar-container">
+                    <div class="progress-bar" [style.width.%]="selectedDocument.metadata_records[0].confidence_score * 100"></div>
+                    <span class="progress-label">{{ (selectedDocument.metadata_records[0].confidence_score * 100).toFixed(0) }}%</span>
+                  </div>
+                </div>
+
+                <!-- Added Readability Ease score -->
+                <div class="triage-confidence mt-2" *ngIf="selectedDocument.metadata_records[0].readability_score">
+                  <span class="report-label">Readability Ease:</span>
+                  <div class="progress-bar-container">
+                    <div class="progress-bar blue" [style.width.%]="selectedDocument.metadata_records[0].readability_score"></div>
+                    <span class="progress-label">{{ selectedDocument.metadata_records[0].readability_score.toFixed(1) }}</span>
+                  </div>
+                </div>
+                
+                <div class="extracted-properties mt-3">
+                  <span class="report-label">Extracted Key Properties:</span>
+                  <div class="property-grid">
+                    <div class="property-row" *ngFor="let prop of selectedDocument.metadata_records[0].extracted_properties | keyvalue">
+                      <span class="prop-key">{{ prop.key }}</span>
+                      <span class="prop-val">{{ prop.value }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Added Extracted Entities Accordion -->
+                <div class="extracted-properties mt-3" *ngIf="selectedDocument.metadata_records[0].entities">
+                  <span class="report-label">Extracted Named Entities (NER):</span>
+                  <div class="ner-container mt-1">
+                    <!-- Organizations -->
+                    <div class="ner-category" *ngIf="selectedDocument.metadata_records[0].entities.organizations?.length > 0">
+                      <span class="ner-cat-title">Organizations:</span>
+                      <div class="ner-tags">
+                        <span class="badge badge-info mr-1 mb-1" *ngFor="let org of selectedDocument.metadata_records[0].entities.organizations">{{ org }}</span>
+                      </div>
+                    </div>
+                    <!-- Locations -->
+                    <div class="ner-category mt-2" *ngIf="selectedDocument.metadata_records[0].entities.locations?.length > 0">
+                      <span class="ner-cat-title">Locations:</span>
+                      <div class="ner-tags">
+                        <span class="badge badge-success mr-1 mb-1" *ngFor="let loc of selectedDocument.metadata_records[0].entities.locations">{{ loc }}</span>
+                      </div>
+                    </div>
+                    <!-- Dates -->
+                    <div class="ner-category mt-2" *ngIf="selectedDocument.metadata_records[0].entities.dates?.length > 0">
+                      <span class="ner-cat-title">Dates:</span>
+                      <div class="ner-tags">
+                        <span class="badge badge-warning mr-1 mb-1" *ngFor="let dt of selectedDocument.metadata_records[0].entities.dates">{{ dt }}</span>
+                      </div>
+                    </div>
+                    <!-- Monetary Amounts -->
+                    <div class="ner-category mt-2" *ngIf="selectedDocument.metadata_records[0].entities.monetary_amounts?.length > 0">
+                      <span class="ner-cat-title">Monetary Amounts:</span>
+                      <div class="ner-tags">
+                        <span class="badge badge-danger mr-1 mb-1" *ngFor="let mon of selectedDocument.metadata_records[0].entities.monetary_amounts">{{ mon }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="empty-report" *ngIf="selectedDocument.metadata_records.length === 0">
+                <p>Triage results will display here once execution finishes.</p>
+              </div>
+            </div>
+
+            <!-- Agent B: Privacy Compliance Guardian -->
+            <div class="compliance-report-panel glass-card">
+              <div class="col-header border-b">
+                <h4>Agent B: Privacy Compliance</h4>
+              </div>
+              
+              <div class="report-content" *ngIf="selectedDocument.audits.length > 0">
+                <div class="compliance-status-row">
+                  <span class="report-label">Vetting Status:</span>
+                  <span class="badge" 
+                        [class.badge-success]="selectedDocument.audits[0].compliance_status === 'PASSED'"
+                        [class.badge-warning]="selectedDocument.audits[0].compliance_status === 'WARNING'"
+                        [class.badge-danger]="selectedDocument.audits[0].compliance_status === 'VIOLATED'">
+                    {{ selectedDocument.audits[0].compliance_status }}
+                  </span>
+                </div>
+                
+                <div class="pii-indicator-row mt-2">
+                  <span class="report-label">PII Risk Level:</span>
+                  <span class="risk-indicator" [class]="selectedDocument.audits[0].risk_level.toLowerCase()">
+                    {{ selectedDocument.audits[0].risk_level }}
+                  </span>
+                </div>
+
+                <div class="pii-categories mt-3" *ngIf="selectedDocument.audits[0].pii_categories_found.length > 0">
+                  <span class="report-label">Detected PII Categories:</span>
+                  <div class="category-tags">
+                    <span class="badge badge-info mr-1 mb-1" *ngFor="let cat of selectedDocument.audits[0].pii_categories_found">{{ cat }}</span>
+                  </div>
+                </div>
+
+                <div class="violating-snippets-list mt-3" *ngIf="selectedDocument.audits[0].violating_snippets.length > 0">
+                  <span class="report-label">Flagged Content Snippets:</span>
+                  <div class="snippet-box" *ngFor="let snippet of selectedDocument.audits[0].violating_snippets">
+                    <code>"{{ snippet }}"</code>
+                  </div>
+                </div>
+              </div>
+
+              <div class="empty-report" *ngIf="selectedDocument.audits.length === 0">
+                <p>Vetting results will display here once execution finishes.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Agent C Workflow Outbox -->
+          <div class="insight-col glass-card action-col">
+            <div class="col-header">
+              <h4>Agent C: Governance Routing Outbox</h4>
+            </div>
+            
+            <div class="action-outbox-content" *ngIf="selectedDocument.actions.length > 0">
+              <div class="routing-decision">
+                <span class="report-label">Recommended Swarm Action:</span>
+                <div class="decision-box">
+                  <span class="decision-icon">&#x27A1;</span>
+                  <span class="decision-text">{{ selectedDocument.actions[0].recommended_action }}</span>
+                </div>
+              </div>
+
+              <div class="response-draft-container mt-4">
+                <span class="report-label">Draft Communications Template:</span>
+                <textarea class="form-input draft-textarea" readonly>{{ selectedDocument.actions[0].drafted_response }}</textarea>
+              </div>
+
+              <div class="outbox-execution mt-4">
+                <button class="btn-primary justify-center">
+                  <span>&#x2709;</span> Dispatch & Archive
+                </button>
+                <button class="btn-secondary justify-center" (click)="exportDocumentData(selectedDocument.id, selectedDocument.filename)">
+                  <span>&#x1F4E5;</span> Export Package
+                </button>
+              </div>
+            </div>
+
+            <div class="empty-report" *ngIf="selectedDocument.actions.length === 0">
+              <p>Routing action draft will display here once execution finishes.</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+  <!-- FLOATING CHAT DRAWER -->
+  <div class="chat-drawer" [class.open]="isChatOpen">
+    <!-- Chat Header -->
+    <div class="chat-header" (click)="toggleChat()">
+      <div class="chat-header-title">
+        <span class="chat-status-dot"></span>
+        <h3>EIM Swarm Chatbot</h3>
+      </div>
+      <button class="chat-toggle-btn">
+        <span *ngIf="!isChatOpen">&#x25B2;</span>
+        <span *ngIf="isChatOpen">&#x25BC;</span>
+      </button>
+    </div>
+
+    <!-- Chat Body -->
+    <div class="chat-body" id="chat-body">
+      <div class="chat-welcome" *ngIf="chatMessages.length === 0">
+        <p>I am the Enterprise Information Assistant. Ask me anything about your ingested documents!</p>
+        <div class="chat-suggestions">
+          <button class="suggestion-btn" (click)="quickQuestion('Show all compliance violations')">"Show all compliance violations"</button>
+          <button class="suggestion-btn" (click)="quickQuestion('Summarize the remote work HR policy')">"Summarize remote work policy"</button>
+        </div>
+      </div>
+
+      <div class="chat-msg-row" *ngFor="let msg of chatMessages" [class.user]="msg.sender === 'user'">
+        <div class="msg-bubble">
+          <p class="msg-text">{{ msg.text }}</p>
+          
+          <!-- Sources citations -->
+          <div class="msg-sources" *ngIf="msg.sources && msg.sources.length > 0">
+            <span class="sources-title">Grounded Sources:</span>
+            <div class="sources-list">
+              <span class="source-tag" *ngFor="let src of msg.sources" (click)="viewDocumentDetails(src.document_id)">
+                &#x1F4C4; {{ src.filename }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="chat-msg-row bot" *ngIf="isChatTyping">
+        <div class="msg-bubble typing">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Input Footer -->
+    <div class="chat-footer">
+      <input type="text" 
+             class="form-input chat-input" 
+             placeholder="Ask bot..." 
+             [(ngModel)]="chatInput" 
+             (keyup.enter)="sendChatMessage()"
+             [disabled]="isChatTyping">
+      <button class="btn-primary chat-send-btn" (click)="sendChatMessage()" [disabled]="isChatTyping">
+        <span>&#x27A4;</span>
+      </button>
+    </div>
+  </div>
+</div>

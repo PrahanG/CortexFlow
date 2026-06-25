@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: docuswarm_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: docuswarm_db
+      MYSQL_USER: docuswarm_user
+      MYSQL_PASSWORD: docuswarm_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: docuswarm_chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/data
+
+volumes:
+  mysql_data:
+  chroma_data:
