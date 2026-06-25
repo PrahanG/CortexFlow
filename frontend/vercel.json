@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://cortexflow-backend-your-service-hash.a.run.app/api/v1/:path*"
+      "destination": "https://cortexflow-backend-393953441331.us-central1.run.app/api/v1/:path*"
     },
     {
       "source": "/(..*)",
