@@ -12,8 +12,12 @@ if "ssl=true" in database_url.lower():
         base_url, query = database_url.split("?", 1)
         params = [p for p in query.split("&") if not p.lower().startswith("ssl=")]
         database_url = base_url + ("?" + "&".join(params) if params else "")
-    # Pass actual boolean True to connect_args
-    connect_args["ssl"] = True
+    # Pass custom ssl context to connect_args to bypass self-signed certificate validation
+    import ssl
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    connect_args["ssl"] = ssl_context
 
 # Create async engine for MySQL
 engine = create_async_engine(
