@@ -2,11 +2,25 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
+# Parse connection arguments for SSL
+connect_args = {}
+database_url = settings.DATABASE_URL
+
+if "ssl=true" in database_url.lower():
+    # Remove ssl=true from the URL so SQLAlchemy doesn't pass it as a string
+    if "?" in database_url:
+        base_url, query = database_url.split("?", 1)
+        params = [p for p in query.split("&") if not p.lower().startswith("ssl=")]
+        database_url = base_url + ("?" + "&".join(params) if params else "")
+    # Pass actual boolean True to connect_args
+    connect_args["ssl"] = True
+
 # Create async engine for MySQL
 engine = create_async_engine(
-    settings.DATABASE_URL, 
+    database_url, 
     echo=False, 
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    connect_args=connect_args
 )
 
 # Async session factory
