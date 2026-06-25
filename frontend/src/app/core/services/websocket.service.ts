@@ -8,6 +8,10 @@ import { ExecutionLog } from './api.service';
 export class WebsocketService {
   private wsUrl = 'ws://127.0.0.1:8080/api/v1/documents';
 
+  setWsUrl(url: string) {
+    this.wsUrl = url;
+  }
+
   /**
    * Establishes a WebSocket connection for a specific document ID.
    * Returns an Observable streaming progress logs from the LangGraph swarm.

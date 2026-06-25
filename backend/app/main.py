@@ -39,6 +39,13 @@ app.add_middleware(
 # Register routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+@app.get("/api/v1/config")
+def read_config():
+    import os
+    return {
+        "ws_url": os.getenv("WS_URL", "ws://127.0.0.1:8080/api/v1/documents")
+    }
+
 @app.get("/")
 def read_root():
     return {

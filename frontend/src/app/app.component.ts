@@ -47,6 +47,12 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.apiService.getAppConfig().subscribe({
+      next: (cfg) => {
+        this.wsService.setWsUrl(cfg.ws_url);
+      },
+      error: (err) => console.error('Failed to load application config', err)
+    });
     this.refreshData();
   }
 

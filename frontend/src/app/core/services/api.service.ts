@@ -90,7 +90,9 @@ export interface ChatResponse {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'http://127.0.0.1:8080/api/v1';
+  private baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+    ? 'http://127.0.0.1:8080/api/v1'
+    : '/api/v1';
 
   constructor(private http: HttpClient) {}
 
@@ -125,6 +127,10 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/documents/${id}/export`, {
       responseType: 'blob'
     });
+  }
+
+  getAppConfig(): Observable<{ ws_url: string }> {
+    return this.http.get<{ ws_url: string }>(`${this.baseUrl}/config`);
   }
 }
 
