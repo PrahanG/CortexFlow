@@ -1,21 +1,23 @@
 import chromadb
 from app.core.config import settings
 
-def get_chroma_client() -> chromadb.HttpClient:
+def get_chroma_client():
     """
-    Creates and returns an HTTP client connected to the dockerized ChromaDB or Chroma Cloud.
+    Creates and returns a client connected to the dockerized ChromaDB or TryChroma Cloud.
     """
-    headers = {}
     if settings.CHROMA_API_KEY:
-        headers["Authorization"] = f"Bearer {settings.CHROMA_API_KEY}"
+        return chromadb.CloudClient(
+            api_key=settings.CHROMA_API_KEY,
+            tenant=settings.CHROMA_TENANT,
+            database=settings.CHROMA_DATABASE
+        )
     return chromadb.HttpClient(
         host=settings.CHROMA_HOST, 
         port=settings.CHROMA_PORT,
-        ssl=settings.CHROMA_SSL,
-        headers=headers if headers else None
+        ssl=settings.CHROMA_SSL
     )
 
-def get_chroma_collection(client: chromadb.HttpClient = None):
+def get_chroma_collection(client = None):
     """
     Retrieves or creates the vector collection for DocuSwarm AI.
     """

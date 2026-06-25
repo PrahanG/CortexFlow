@@ -1,0 +1,20 @@
+# Ignore Git configurations
+.git/
+.gitignore
+.gcloudignore
+
+# Ignore Python virtual environments
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local data, logs, and secrets
+.env
+uploads/
+*.db
+*.sqlite
+*.log
